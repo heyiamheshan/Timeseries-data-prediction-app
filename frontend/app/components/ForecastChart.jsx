@@ -58,20 +58,20 @@ export default function ForecastChart({ data }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white rounded-xl shadow-card border border-slate-200 p-6 mb-6">
+      <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2 className="text-base font-semibold text-ink">
             Forecast Visualization
           </h2>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-muted">
             Historical data + 3 year TimesFM prediction
           </p>
         </div>
-        <div className="text-right text-sm text-gray-500">
-          <p>Historical : {data.historical.dates.length} points</p>
-          <p>Forecast   : {data.forecast.dates.length} points</p>
-          <p>Model      : {data.metadata.model}</p>
+        <div className="text-right text-xs text-ink-muted space-y-0.5">
+          <p>Historical&nbsp;&nbsp;{data.historical.dates.length} points</p>
+          <p>Forecast&nbsp;&nbsp;&nbsp;&nbsp;{data.forecast.dates.length} points</p>
+          <p>Model&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{data.metadata.model}</p>
         </div>
       </div>
 
@@ -164,28 +164,28 @@ export default function ForecastChart({ data }) {
       </ResponsiveContainer>
 
       {/* Stats Summary */}
-      <div className="grid grid-cols-4 gap-4 mt-6 pt-4 border-t">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-200">
         <div className="text-center">
-          <p className="text-xs text-gray-500">Frequency</p>
-          <p className="font-semibold text-gray-800 capitalize">
+          <p className="text-xs text-ink-muted mb-1">Frequency</p>
+          <p className="font-semibold text-ink capitalize">
             {data.metadata.frequency}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-gray-500">Forecast Points</p>
-          <p className="font-semibold text-gray-800">
+          <p className="text-xs text-ink-muted mb-1">Forecast Points</p>
+          <p className="font-semibold text-ink">
             {data.metadata.horizon}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-gray-500">Predicted Min</p>
-          <p className="font-semibold text-gray-800">
+          <p className="text-xs text-ink-muted mb-1">Predicted Min</p>
+          <p className="font-semibold text-ink">
             {Math.min(...data.forecast.values).toFixed(2)}
           </p>
         </div>
         <div className="text-center">
-          <p className="text-xs text-gray-500">Predicted Max</p>
-          <p className="font-semibold text-gray-800">
+          <p className="text-xs text-ink-muted mb-1">Predicted Max</p>
+          <p className="font-semibold text-ink">
             {Math.max(...data.forecast.values).toFixed(2)}
           </p>
         </div>

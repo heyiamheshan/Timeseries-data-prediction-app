@@ -70,61 +70,58 @@ export default function DownloadButton({ data }) {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-800 mb-2">
+    <div className="bg-white rounded-xl shadow-card border border-slate-200 p-6 mb-6">
+      <h2 className="text-base font-semibold text-ink mb-1">
         Download Results
       </h2>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-ink-muted mb-4">
         Download the forecast data as CSV file
       </p>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-2 gap-3">
 
         {/* Full Download */}
         <button
           onClick={handleDownload}
           disabled={downloading}
           className="flex items-center justify-center gap-2
-                     bg-green-600 text-white py-3 px-4
+                     bg-secondary text-white py-3 px-4 text-sm
                      rounded-lg font-medium hover:bg-green-700
                      disabled:opacity-50 disabled:cursor-not-allowed
-                     transition-colors duration-200"
+                     transition-colors duration-150"
         >
-          {downloading ? "Downloading..." : "Download Full Data (CSV)"}
+          {downloading ? "Downloading…" : "Download Full Data (CSV)"}
         </button>
 
         {/* Forecast Only Download */}
         <button
           onClick={handleDownloadForecastOnly}
           className="flex items-center justify-center gap-2
-                     bg-blue-600 text-white py-3 px-4
-                     rounded-lg font-medium hover:bg-blue-700
-                     transition-colors duration-200"
+                     bg-primary text-white py-3 px-4 text-sm
+                     rounded-lg font-medium hover:bg-primary-dark
+                     transition-colors duration-150"
         >
           Download Forecast Only (CSV)
         </button>
       </div>
 
       {/* File Info */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <p className="text-xs text-gray-500 font-medium mb-1">
+      <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+        <p className="text-xs text-ink-muted font-medium mb-1">
           Full Data CSV contains:
         </p>
-        <p className="text-xs text-gray-400">
-          date, type (actual/predicted), value,
-          lower_bound, upper_bound
+        <p className="text-xs text-ink-faint">
+          date, type (actual/predicted), value, lower_bound, upper_bound
         </p>
-        <p className="text-xs text-gray-500 font-medium mt-2 mb-1">
+        <p className="text-xs text-ink-muted font-medium mt-3 mb-1">
           Forecast Only CSV contains:
         </p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-ink-faint">
           date, predicted, lower_bound, upper_bound
         </p>
-        <p className="text-xs text-gray-400 mt-2">
-          Total rows: {data.historical.dates.length +
-                       data.forecast.dates.length} 
-          ({data.historical.dates.length} historical +
-           {data.forecast.dates.length} predicted)
+        <p className="text-xs text-ink-faint mt-3 pt-3 border-t border-slate-200">
+          Total rows: {data.historical.dates.length + data.forecast.dates.length}
+          {" "}({data.historical.dates.length} historical + {data.forecast.dates.length} predicted)
         </p>
       </div>
     </div>

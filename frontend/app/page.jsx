@@ -63,43 +63,52 @@ export default function Home() {
   return (
     <div>
       {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-ink mb-1">
           Time Series Forecasting
         </h1>
-        <p className="text-gray-500">
-          Upload your time series CSV data and get a
-          3 year forecast powered by Google TimesFM 2.5
+        <p className="text-ink-muted text-sm">
+          Upload your time series CSV data and get a 3 year forecast powered by Google TimesFM 2.5
         </p>
       </div>
 
-      {/* How to use */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-        <h3 className="text-sm font-semibold text-blue-800 mb-2">
-          How to use
-        </h3>
-        <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-          <li>Prepare a CSV file with a date column and a value column</li>
-          <li>Upload the CSV and set the correct column names</li>
-          <li>Select the data frequency (daily / weekly / monthly)</li>
-          <li>Click Generate Forecast and wait for TimesFM to predict</li>
-          <li>View the chart and download results as CSV</li>
-        </ol>
-      </div>
+      {/* How to use + Sample format */}
+      <div className="grid md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card">
+          <h3 className="text-sm font-semibold text-ink mb-3">
+            How to use
+          </h3>
+          <ol className="text-sm text-ink-muted space-y-2">
+            {[
+              "Prepare a CSV file with a date column and a value column",
+              "Upload the CSV and set the correct column names",
+              "Select the data frequency (daily / weekly / monthly)",
+              "Click Generate Forecast and wait for TimesFM to predict",
+              "View the chart and download results as CSV",
+            ].map((step, i) => (
+              <li key={i} className="flex gap-2.5">
+                <span className="flex-none h-5 w-5 rounded-full bg-primary-light text-primary text-xs font-semibold flex items-center justify-center">
+                  {i + 1}
+                </span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
 
-      {/* Sample CSV Format */}
-      <div className="bg-gray-50 border rounded-xl p-4 mb-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-          Expected CSV format
-        </h3>
-        <pre className="text-xs text-gray-600 font-mono">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card">
+          <h3 className="text-sm font-semibold text-ink mb-3">
+            Expected CSV format
+          </h3>
+          <pre className="text-xs text-ink-muted font-mono bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-x-auto">
 {`date,value
 2020-01-01,1250
 2020-01-02,1380
 2020-01-03,1290
 2020-01-04,1450
 ...`}
-        </pre>
+          </pre>
+        </div>
       </div>
 
       {/* File Upload Component */}
@@ -110,11 +119,11 @@ export default function Home() {
 
       {/* Progress Message */}
       {progress && (
-        <div className="bg-yellow-50 border border-yellow-200
+        <div className="bg-amber-50 border border-amber-200
                         rounded-xl p-4 mb-6 flex items-center gap-3">
           <div className="animate-spin rounded-full h-5 w-5
-                          border-b-2 border-yellow-600"></div>
-          <p className="text-yellow-700 text-sm font-medium">
+                          border-2 border-amber-600 border-t-transparent"></div>
+          <p className="text-amber-800 text-sm font-medium">
             {progress}
           </p>
         </div>
@@ -122,7 +131,7 @@ export default function Home() {
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200
+        <div className="bg-danger-light border border-red-200
                         rounded-xl p-4 mb-6">
           <p className="text-red-700 text-sm font-medium">
             {error}
@@ -140,12 +149,12 @@ export default function Home() {
 
       {/* Empty State */}
       {!forecastData && !loading && (
-        <div className="bg-white rounded-xl shadow-md p-12
-                        text-center border-2 border-dashed border-gray-200">
-          <p className="text-gray-400 text-lg mb-2">
+        <div className="bg-white rounded-xl p-12
+                        text-center border-2 border-dashed border-slate-200">
+          <p className="text-ink-muted text-base font-medium mb-1">
             No forecast yet
           </p>
-          <p className="text-gray-300 text-sm">
+          <p className="text-ink-faint text-sm">
             Upload a CSV file above to generate your forecast
           </p>
         </div>
