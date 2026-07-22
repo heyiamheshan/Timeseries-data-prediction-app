@@ -37,6 +37,7 @@ export default function FileUpload({ onForecast, loading }) {
   const [dateColumn, setDateColumn] = useState("date")
   const [valueColumn, setValueColumn] = useState("value")
   const [frequency, setFrequency] = useState(null)
+  const [horizon, setHorizon]     = useState(1095)
   const [dragOver, setDragOver]   = useState(false)
   const [preview, setPreview]     = useState(null)
   const [error, setError]         = useState("")
@@ -78,7 +79,11 @@ export default function FileUpload({ onForecast, loading }) {
       setError("Please upload a CSV file first")
       return
     }
-    onForecast(file, dateColumn, valueColumn, frequency || "daily")
+    if (!horizon || horizon < 1) {
+      setError("Please enter a valid number of rows to predict")
+      return
+    }
+    onForecast(file, dateColumn, valueColumn, frequency || "daily", horizon)
   }
 
   return (
@@ -121,46 +126,48 @@ export default function FileUpload({ onForecast, loading }) {
 
       {/* Column Config */}
       <div className="grid sm:grid-cols-3 gap-4 mb-5">
-        <div>
+        <div className="text-center">
           <label htmlFor="dateColumn" className="text-xs font-medium text-ink-muted block mb-1.5">
-            Date Column
+            X
           </label>
           <input
             id="dateColumn"
             type="text"
             value={dateColumn}
             onChange={(e) => setDateColumn(e.target.value)}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-center
                        focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
             placeholder="date"
           />
         </div>
-        <div>
+        <div className="text-center">
           <label htmlFor="valueColumn" className="text-xs font-medium text-ink-muted block mb-1.5">
-            Value Column
+            Y
           </label>
           <input
             id="valueColumn"
             type="text"
             value={valueColumn}
             onChange={(e) => setValueColumn(e.target.value)}
-            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-center
                        focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
             placeholder="value"
           />
         </div>
-        <div>
-          <span className="text-xs font-medium text-ink-muted block mb-1.5">
-            Frequency
-          </span>
-          <div className="w-full border border-slate-200 bg-slate-50 rounded-lg px-3 py-2 text-sm flex items-center justify-between">
-            <span className="capitalize text-ink">
-              {frequency || "—"}
-            </span>
-            <span className="text-[10px] uppercase tracking-wide text-ink-faint">
-              {frequency ? "auto-detected" : "upload a file"}
-            </span>
-          </div>
+        <div className="text-center">
+          <label htmlFor="horizon" className="text-xs font-medium text-ink-muted block mb-1.5">
+            Rows to Predict
+          </label>
+          <input
+            id="horizon"
+            type="number"
+            min={1}
+            value={horizon}
+            onChange={(e) => setHorizon(parseInt(e.target.value, 10) || "")}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-center
+                       focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+            placeholder="1095"
+          />
         </div>
       </div>
 
@@ -201,7 +208,7 @@ export default function FileUpload({ onForecast, loading }) {
                    hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed
                    transition-colors duration-150"
       >
-        {loading ? "Forecasting… Please wait" : "Generate 3 Year Forecast"}
+        {loading ? "Forecasting… Please wait" : "Generate"}
       </button>
     </div>
   )

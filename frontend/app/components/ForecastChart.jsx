@@ -65,7 +65,7 @@ export default function ForecastChart({ data }) {
             Forecast Visualization
           </h2>
           <p className="text-sm text-ink-muted">
-            Historical data + 3 year TimesFM prediction
+            Historical data + {data.forecast.dates.length.toLocaleString()}-row TimesFM prediction
           </p>
         </div>
         <div className="text-right text-xs text-ink-muted space-y-0.5">

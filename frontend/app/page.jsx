@@ -17,7 +17,8 @@ export default function Home() {
     file,
     dateColumn,
     valueColumn,
-    frequency
+    frequency,
+    horizon
   ) => {
     setLoading(true)
     setError("")
@@ -33,7 +34,7 @@ export default function Home() {
 
       // Call FastAPI backend
       const response = await axios.post(
-        `${API_URL}/forecast?date_column=${dateColumn}&value_column=${valueColumn}&frequency=${frequency}`,
+        `${API_URL}/forecast?date_column=${dateColumn}&value_column=${valueColumn}&frequency=${frequency}&horizon=${horizon}`,
         formData,
         {
           headers: {
@@ -68,7 +69,7 @@ export default function Home() {
           Time Series Forecasting
         </h1>
         <p className="text-ink-muted text-sm">
-          Upload your time series CSV data and get a 3 year forecast powered by Google TimesFM 2.5
+          Upload your time series CSV data and get a custom-length forecast powered by Google TimesFM 2.5
         </p>
       </div>
 
@@ -82,8 +83,8 @@ export default function Home() {
             {[
               "Prepare a CSV file with a date column and a value column",
               "Upload the CSV and set the correct column names",
-              "Select the data frequency (daily / weekly / monthly)",
-              "Click Generate Forecast and wait for TimesFM to predict",
+              "Enter how many rows you want predicted",
+              "Click Generate and wait for TimesFM to predict",
               "View the chart and download results as CSV",
             ].map((step, i) => (
               <li key={i} className="flex gap-2.5">

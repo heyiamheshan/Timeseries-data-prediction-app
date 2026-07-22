@@ -2,7 +2,7 @@ import "./globals.css"
 
 export const metadata = {
   title: "TimesFM Forecasting App",
-  description: "Upload time series data and predict next 3 years using Google TimesFM",
+  description: "Upload time series data and predict any number of future rows using Google TimesFM",
 }
 
 export default function RootLayout({ children }) {
