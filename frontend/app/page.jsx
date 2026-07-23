@@ -73,44 +73,7 @@ export default function Home() {
         </p>
       </div>
 
-      {/* How to use + Sample format */}
-      <div className="grid md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card">
-          <h3 className="text-sm font-semibold text-ink mb-3">
-            How to use
-          </h3>
-          <ol className="text-sm text-ink-muted space-y-2">
-            {[
-              "Prepare a CSV file with a date column and a value column",
-              "Upload the CSV and set the correct column names",
-              "Enter how many rows you want predicted",
-              "Click Generate and wait for TimesFM to predict",
-              "View the chart and download results as CSV",
-            ].map((step, i) => (
-              <li key={i} className="flex gap-2.5">
-                <span className="flex-none h-5 w-5 rounded-full bg-primary-light text-primary text-xs font-semibold flex items-center justify-center">
-                  {i + 1}
-                </span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-card">
-          <h3 className="text-sm font-semibold text-ink mb-3">
-            Expected CSV format
-          </h3>
-          <pre className="text-xs text-ink-muted font-mono bg-slate-50 border border-slate-200 rounded-lg p-3 overflow-x-auto">
-{`date,value
-2020-01-01,1250
-2020-01-02,1380
-2020-01-03,1290
-2020-01-04,1450
-...`}
-          </pre>
-        </div>
-      </div>
+      
 
       {/* File Upload Component */}
       <FileUpload

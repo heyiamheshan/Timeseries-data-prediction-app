@@ -1,4 +1,5 @@
 import "./globals.css"
+import NavTabs from "./components/NavTabs"
 
 export const metadata = {
   title: "TimesFM Forecasting App",
@@ -20,6 +21,8 @@ export default function RootLayout({ children }) {
             
           </div>
         </header>
+
+        <NavTabs />
 
         <main className="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
           {children}
