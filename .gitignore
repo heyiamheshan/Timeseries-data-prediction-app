@@ -15,3 +15,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Downloaded model weights cache
+backend/models/*
+!backend/models/.gitkeep

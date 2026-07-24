@@ -1,7 +1,10 @@
+import os
+from typing import Callable
 import numpy as np
-import pandas as pd
 import torch
 from transformers import TimesFm2_5ModelForPrediction
+
+MODEL_CACHE_DIR = os.path.join(os.path.dirname(__file__), "models")
 
 
 class TimesFMForecaster:
@@ -13,27 +16,27 @@ class TimesFMForecaster:
         print(f"Loading TimesFM model on {self.device}...")
         self.model = TimesFm2_5ModelForPrediction.from_pretrained(
             "google/timesfm-2.5-200m-transformers",
+            cache_dir=MODEL_CACHE_DIR,
             device_map="auto",
         )
         print("TimesFM model loaded successfully")
 
-    def predict(self, values: list, horizon: int = 1095) -> dict:
+    def predict(self, values: list, horizon: int = 1095, stop_check: Callable[[], bool] | None = None) -> dict:
         if self.model is None:
             self.load_model()
 
-        # Convert to tensor
-        input_tensor = [torch.tensor(
-            np.array(values, dtype=np.float32),
-            dtype=torch.float32,
-            device=next(self.model.parameters()).device
-        )]
+        stop_check = stop_check or (lambda: False)
 
         # Run inference in chunks
         all_predictions = []
         context = np.array(values, dtype=np.float32)
         days_predicted = 0
+        quantiles_use = []
 
         while days_predicted < horizon:
+            if stop_check():
+                break
+
             tensor = [torch.tensor(
                 context,
                 dtype=torch.float32,
@@ -59,8 +62,8 @@ class TimesFMForecaster:
 
         return {
             "predictions": all_predictions[:horizon],
-            "lower_bound": [float(q[1]) for q in quantiles_use[:horizon]] if len(all_predictions) <= 128 else [],
-            "upper_bound": [float(q[-2]) for q in quantiles_use[:horizon]] if len(all_predictions) <= 128 else [],
+            "lower_bound": [float(q[1]) for q in quantiles_use[:horizon]] if len(quantiles_use) else [],
+            "upper_bound": [float(q[-2]) for q in quantiles_use[:horizon]] if len(quantiles_use) else [],
         }
 
 

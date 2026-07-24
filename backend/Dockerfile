@@ -7,12 +7,16 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     git \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (better caching)
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install CPU-only torch first (avoids pulling ~2GB of unused CUDA/NVIDIA libs)
+RUN pip install --no-cache-dir torch==2.5.1 --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code

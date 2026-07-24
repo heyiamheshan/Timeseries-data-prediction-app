@@ -1,215 +1,192 @@
 "use client"
 import {
-  ComposedChart, Line, Area,
-  XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ReferenceLine,
+  ComposedChart,
+  Line,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ReferenceLine,
   ResponsiveContainer
 } from "recharts"
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null
-  return (
-    <div className="bg-surface border border-surface-border rounded-xl p-3 shadow-xl text-xs font-mono">
-      <p className="text-muted mb-2">{label}</p>
-      {payload.map((entry, i) => (
-        entry.value !== null && (
-          <div key={i} className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full" style={{ background: entry.color }}></span>
-            <span className="text-muted">{entry.name}:</span>
-            <span className="text-white font-500">{entry.value?.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
-          </div>
-        )
-      ))}
-    </div>
-  )
-}
 
 export default function ForecastChart({ data }) {
   if (!data) return null
 
+  // Combine historical and forecast into one array
   const chartData = [
+    // Historical points
     ...data.historical.dates.map((date, i) => ({
       date,
-      actual   : data.historical.values[i],
+      actual: data.historical.values[i],
       predicted: null,
-      lower    : null,
-      upper    : null,
+      lower: null,
+      upper: null,
     })),
+    // Forecast points
     ...data.forecast.dates.map((date, i) => ({
       date,
-      actual   : null,
-      predicted: parseFloat(data.forecast.values[i]?.toFixed(1)),
-      lower    : data.forecast.lower_bound[i] ? parseFloat(data.forecast.lower_bound[i]?.toFixed(1)) : null,
-      upper    : data.forecast.upper_bound[i] ? parseFloat(data.forecast.upper_bound[i]?.toFixed(1)) : null,
+      actual: null,
+      predicted: parseFloat(data.forecast.values[i]?.toFixed(2)),
+      lower: data.forecast.lower_bound[i]
+        ? parseFloat(data.forecast.lower_bound[i]?.toFixed(2))
+        : null,
+      upper: data.forecast.upper_bound[i]
+        ? parseFloat(data.forecast.upper_bound[i]?.toFixed(2))
+        : null,
     })),
   ]
 
-  const forecastStart  = data.forecast.dates[0]
-  const totalPoints    = chartData.length
-  const labelInterval  = Math.floor(totalPoints / 10)
-  const predMin        = Math.min(...data.forecast.values).toFixed(1)
-  const predMax        = Math.max(...data.forecast.values).toFixed(1)
-  const predMean       = (data.forecast.values.reduce((a, b) => a + b, 0) / data.forecast.values.length).toFixed(1)
-  const histMean       = (data.historical.values.reduce((a, b) => a + b, 0) / data.historical.values.length).toFixed(1)
-  const change         = (((predMean - histMean) / histMean) * 100).toFixed(1)
+  // Forecast start date for reference line
+  const forecastStartDate = data.forecast.dates[0]
 
-  const stats = [
-    { label: "Historical points", value: data.historical.dates.length.toLocaleString(), badge: "actual" },
-    { label: "Forecast points",   value: data.metadata.horizon.toLocaleString(),        badge: "predicted" },
-    { label: "Predicted min",     value: parseFloat(predMin).toLocaleString(),           badge: "neutral" },
-    { label: "Predicted max",     value: parseFloat(predMax).toLocaleString(),           badge: "neutral" },
-    { label: "Predicted mean",    value: parseFloat(predMean).toLocaleString(),          badge: "neutral" },
-    { label: "vs historical avg", value: `${change > 0 ? "+" : ""}${change}%`,          badge: change > 0 ? "up" : "down" },
-  ]
+  // Show every Nth label to avoid crowding
+  const totalPoints = chartData.length
+  const labelInterval = Math.floor(totalPoints / 12)
+
+  const formatTooltip = (value, name) => {
+    if (value === null) return null
+    const labels = {
+      actual   : "Actual",
+      predicted: "Predicted",
+      lower    : "Lower Bound",
+      upper    : "Upper Bound",
+    }
+    return [value?.toLocaleString(), labels[name] || name]
+  }
 
   return (
-    <div className="space-y-4">
-
-      {/* Stats row */}
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-        {stats.map((s, i) => (
-          <div key={i} className="stat-card">
-            <p className="text-muted text-xs font-mono mb-1">{s.label}</p>
-            <p className={`font-display font-600 text-sm ${
-              s.badge === "up"        ? "text-emerald-400" :
-              s.badge === "down"      ? "text-red-400" :
-              s.badge === "actual"    ? "text-amber-400" :
-              s.badge === "predicted" ? "text-indigo-400" :
-              "text-white"
-            }`}>
-              {s.value}
-            </p>
-          </div>
-        ))}
+    <div className="bg-white rounded-xl shadow-card border border-slate-200 p-6 mb-6">
+      <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
+        <div>
+          <h2 className="text-base font-semibold text-ink">
+            Forecast Visualization
+          </h2>
+          <p className="text-sm text-ink-muted">
+            Historical data + {data.forecast.dates.length.toLocaleString()}-row TimesFM prediction
+          </p>
+        </div>
+        <div className="text-right text-xs text-ink-muted space-y-0.5">
+          <p>Historical&nbsp;&nbsp;{data.historical.dates.length} points</p>
+          <p>Forecast&nbsp;&nbsp;&nbsp;&nbsp;{data.forecast.dates.length} points</p>
+          <p>Model&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{data.metadata.model}</p>
+        </div>
       </div>
 
-      {/* Chart */}
-      <div className="bg-surface rounded-2xl border border-surface-border p-5">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="font-display font-600 text-white text-sm">Forecast Overview</h3>
-            <p className="text-muted text-xs mt-0.5">Historical context + {data.forecast.dates.length.toLocaleString()}-row TimesFM prediction</p>
-          </div>
-          <div className="flex items-center gap-3 text-xs">
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-0.5 bg-amber-400 rounded"></div>
-              <span className="text-muted font-mono">Actual</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-0.5 bg-indigo-400 rounded" style={{ borderTop: "2px dashed #6366F1", background: "none" }}></div>
-              <span className="text-muted font-mono">Predicted</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-4 h-3 rounded" style={{ background: "rgba(16,185,129,0.15)" }}></div>
-              <span className="text-muted font-mono">Confidence</span>
-            </div>
-          </div>
+      {/* Main Chart */}
+      <ResponsiveContainer width="100%" height={420}>
+        <ComposedChart
+          data={chartData}
+          margin={{ top: 10, right: 20, left: 20, bottom: 20 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+
+          <XAxis
+            dataKey="date"
+            tick={{ fontSize: 11 }}
+            interval={labelInterval}
+            angle={-30}
+            textAnchor="end"
+            height={50}
+          />
+
+          <YAxis
+            tick={{ fontSize: 11 }}
+            tickFormatter={(v) => v?.toLocaleString()}
+            width={80}
+          />
+
+          <Tooltip
+            formatter={formatTooltip}
+            labelStyle={{ fontWeight: "bold" }}
+          />
+
+          <Legend verticalAlign="top" height={36} />
+
+          {/* Confidence interval shading */}
+          <Area
+            type="monotone"
+            dataKey="upper"
+            stroke="none"
+            fill="#bbf7d0"
+            fillOpacity={0.4}
+            name="upper"
+            legendType="none"
+          />
+          <Area
+            type="monotone"
+            dataKey="lower"
+            stroke="none"
+            fill="#ffffff"
+            fillOpacity={1}
+            name="lower"
+            legendType="none"
+          />
+
+          {/* Actual historical line */}
+          <Line
+            type="monotone"
+            dataKey="actual"
+            stroke="#2563eb"
+            strokeWidth={2}
+            dot={false}
+            name="actual"
+            connectNulls={false}
+          />
+
+          {/* Predicted line */}
+          <Line
+            type="monotone"
+            dataKey="predicted"
+            stroke="#16a34a"
+            strokeWidth={2}
+            strokeDasharray="6 3"
+            dot={false}
+            name="predicted"
+            connectNulls={false}
+          />
+
+          {/* Forecast start vertical line */}
+          <ReferenceLine
+            x={forecastStartDate}
+            stroke="#dc2626"
+            strokeDasharray="4 2"
+            label={{
+              value: "Forecast Start",
+              position: "top",
+              fontSize: 11,
+              fill: "#dc2626"
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {/* Stats Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-200">
+        <div className="text-center">
+          <p className="text-xs text-ink-muted mb-1">Frequency</p>
+          <p className="font-semibold text-ink capitalize">
+            {data.metadata.frequency}
+          </p>
         </div>
-
-        <ResponsiveContainer width="100%" height={360}>
-          <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 20 }}>
-            <defs>
-              <linearGradient id="confidenceGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10B981" stopOpacity={0.15}/>
-                <stop offset="100%" stopColor="#10B981" stopOpacity={0.02}/>
-              </linearGradient>
-            </defs>
-
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.04)"
-              vertical={false}
-            />
-
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 10, fill: "#6B7280", fontFamily: "JetBrains Mono" }}
-              interval={labelInterval}
-              angle={-30}
-              textAnchor="end"
-              height={44}
-              axisLine={{ stroke: "rgba(255,255,255,0.06)" }}
-              tickLine={false}
-            />
-
-            <YAxis
-              tick={{ fontSize: 10, fill: "#6B7280", fontFamily: "JetBrains Mono" }}
-              tickFormatter={(v) => v?.toLocaleString()}
-              width={70}
-              axisLine={false}
-              tickLine={false}
-            />
-
-            <Tooltip content={<CustomTooltip />} />
-
-            {/* Confidence band */}
-            <Area
-              type="monotone"
-              dataKey="upper"
-              stroke="none"
-              fill="url(#confidenceGrad)"
-              name="upper"
-              legendType="none"
-            />
-            <Area
-              type="monotone"
-              dataKey="lower"
-              stroke="none"
-              fill="var(--color-midnight)"
-              name="lower"
-              legendType="none"
-            />
-
-            {/* Actual */}
-            <Line
-              type="monotone"
-              dataKey="actual"
-              stroke="#F59E0B"
-              strokeWidth={1.5}
-              dot={false}
-              name="Actual"
-              connectNulls={false}
-            />
-
-            {/* Predicted */}
-            <Line
-              type="monotone"
-              dataKey="predicted"
-              stroke="#6366F1"
-              strokeWidth={1.5}
-              strokeDasharray="5 3"
-              dot={false}
-              name="Predicted"
-              connectNulls={false}
-            />
-
-            {/* Forecast start line */}
-            <ReferenceLine
-              x={forecastStart}
-              stroke="rgba(255,255,255,0.15)"
-              strokeDasharray="4 3"
-              label={{
-                value: "Forecast start",
-                position: "top",
-                fontSize: 10,
-                fill: "#6B7280",
-                fontFamily: "JetBrains Mono"
-              }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        {/* Model info footer */}
-        <div className="mt-4 pt-4 border-t border-surface-border flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="badge badge-indigo">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-              {data.metadata.model}
-            </span>
-            <span className="badge badge-amber">{data.metadata.frequency}</span>
-          </div>
-          <p className="text-xs text-muted font-mono">
-            Zero-shot · no fine-tuning
+        <div className="text-center">
+          <p className="text-xs text-ink-muted mb-1">Forecast Points</p>
+          <p className="font-semibold text-ink">
+            {data.metadata.horizon}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-ink-muted mb-1">Predicted Min</p>
+          <p className="font-semibold text-ink">
+            {Math.min(...data.forecast.values).toFixed(2)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-xs text-ink-muted mb-1">Predicted Max</p>
+          <p className="font-semibold text-ink">
+            {Math.max(...data.forecast.values).toFixed(2)}
           </p>
         </div>
       </div>

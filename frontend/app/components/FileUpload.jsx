@@ -1,12 +1,12 @@
 "use client"
-import { useState, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 
 // Median gap (in days) between consecutive dates found in the date column
 function detectFrequency(rawText, headers, dateColumn) {
   const colIndex = headers.findIndex(
     h => h.trim().toLowerCase() === dateColumn.trim().toLowerCase()
   )
-  if (colIndex === -1) return "daily"
+  if (colIndex === -1) return null
 
   const lines = rawText.split("\n").slice(1)
   const dates = []
@@ -17,7 +17,7 @@ function detectFrequency(rawText, headers, dateColumn) {
     if (!isNaN(parsed)) dates.push(parsed)
     if (dates.length >= 30) break
   }
-  if (dates.length < 2) return "daily"
+  if (dates.length < 2) return null
 
   const gapsInDays = []
   for (let i = 1; i < dates.length; i++) {
@@ -32,23 +32,26 @@ function detectFrequency(rawText, headers, dateColumn) {
 }
 
 export default function FileUpload({ onForecast, loading }) {
-  const [file, setFile]               = useState(null)
-  const [rawText, setRawText]         = useState("")
-  const [dateColumn, setDateColumn]   = useState("date")
+  const [file, setFile]           = useState(null)
+  const [rawText, setRawText]     = useState("")
+  const [dateColumn, setDateColumn] = useState("date")
   const [valueColumn, setValueColumn] = useState("value")
-  const [frequency, setFrequency]     = useState("daily")
-  const [horizon, setHorizon]         = useState(1095)
-  const [dragOver, setDragOver]       = useState(false)
-  const [preview, setPreview]         = useState(null)
-  const [error, setError]             = useState("")
+  const [frequency, setFrequency] = useState(null)
+  const [horizon, setHorizon]     = useState(1095)
+  const [dragOver, setDragOver]   = useState(false)
+  const [preview, setPreview]     = useState(null)
+  const [error, setError]         = useState("")
+  const abortControllerRef = useRef(null)
 
-  const recomputeFrequency = (text, headers, dateCol) => {
-    setFrequency(detectFrequency(text, headers, dateCol))
-  }
+  // Re-detect frequency whenever the date column name or file content changes
+  useEffect(() => {
+    if (!rawText || !preview) return
+    setFrequency(detectFrequency(rawText, preview.headers, dateColumn))
+  }, [rawText, dateColumn, preview])
 
-  const handleFile = useCallback((uploadedFile) => {
-    if (!uploadedFile?.name.endsWith(".csv")) {
-      setError("Only CSV files are supported")
+  const handleFile = (uploadedFile) => {
+    if (!uploadedFile.name.endsWith(".csv")) {
+      setError("Please upload a CSV file only")
       return
     }
     setError("")
@@ -56,203 +59,153 @@ export default function FileUpload({ onForecast, loading }) {
 
     const reader = new FileReader()
     reader.onload = (e) => {
-      const text    = e.target.result
-      const lines   = text.split("\n").filter(Boolean)
-      const headers = lines[0].split(",").map(h => h.trim())
-      const rows    = lines.slice(1, 6).map(r => r.split(",").map(c => c.trim()))
-
-      // Auto-detect columns
-      const dateGuess  = headers.find(h => /date|time|day|month|year|period/i.test(h)) || headers[0]
-      const valueGuess = headers.find(h => /value|sales|consumption|price|amount|quantity|revenue/i.test(h)) || headers[1]
-      if (dateGuess)  setDateColumn(dateGuess)
-      if (valueGuess) setValueColumn(valueGuess)
-
+      const text = e.target.result
+      const lines = text.split("\n")
+      const headers = lines[0].split(",")
+      const rows = lines.slice(1, 6).map(r => r.split(","))
       setRawText(text)
-      setPreview({ headers, rows, total: lines.length - 1 })
-      recomputeFrequency(text, headers, dateGuess || "date")
+      setPreview({ headers, rows })
     }
     reader.readAsText(uploadedFile)
-  }, [])
+  }
 
-  const handleDrop = useCallback((e) => {
+  const handleDrop = (e) => {
     e.preventDefault()
     setDragOver(false)
     handleFile(e.dataTransfer.files[0])
-  }, [handleFile])
-
-  const handleDateColumnChange = (value) => {
-    setDateColumn(value)
-    if (rawText && preview) recomputeFrequency(rawText, preview.headers, value)
   }
 
   const handleSubmit = () => {
-    if (!file) { setError("Please upload a CSV file first"); return }
-    if (!horizon || horizon < 1) { setError("Please enter a valid number of rows to predict"); return }
-    onForecast(file, dateColumn, valueColumn, frequency, horizon)
+    if (!file) {
+      setError("Please upload a CSV file first")
+      return
+    }
+    if (!horizon || horizon < 1) {
+      setError("Please enter a valid number of rows to predict")
+      return
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+    }
+
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+    onForecast(file, dateColumn, valueColumn, frequency || "daily", horizon, controller.signal)
+  }
+
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
   }
 
   return (
-    <div className="space-y-4">
+    <div className="bg-white rounded-xl shadow-card border border-slate-200 p-6 mb-6">
+      <h2 className="text-base font-semibold text-ink mb-4">
+        Upload Time Series Data
+      </h2>
 
       {/* Drop Zone */}
       <div
-        className={`upload-zone rounded-2xl p-10 text-center cursor-pointer select-none ${dragOver ? "dragging" : ""}`}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload CSV file"
+        className={`upload-zone rounded-lg p-8 text-center cursor-pointer mb-5 ${dragOver ? "dragging" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
-        onClick={() => document.getElementById("csvInput").click()}
+        onClick={() => document.getElementById("fileInput").click()}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") document.getElementById("fileInput").click() }}
       >
+        <p className="text-sm font-medium text-ink mb-1">
+          {file ? file.name : "Drag & drop CSV file here"}
+        </p>
+        <p className="text-xs text-ink-faint">
+          {file ? "Click to choose a different file" : "or click to browse"}
+        </p>
         <input
-          id="csvInput"
+          id="fileInput"
           type="file"
           accept=".csv"
           className="hidden"
           onChange={(e) => handleFile(e.target.files[0])}
         />
-
-        {file ? (
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
-            <p className="text-white font-display font-500 text-sm">{file.name}</p>
-            {preview && (
-              <p className="text-muted text-xs font-mono">{preview.total.toLocaleString()} rows detected</p>
-            )}
-            <p className="text-indigo-400 text-xs">Click to change file</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="1.5" strokeLinecap="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>
-            </div>
-            <div>
-              <p className="text-white font-display font-500 text-sm">Drop your CSV file here</p>
-              <p className="text-muted text-xs mt-1">or click to browse · max 50 MB</p>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-xs text-muted">
-              <span className="badge badge-indigo">date column</span>
-              <span className="text-surface-border">+</span>
-              <span className="badge badge-emerald">value column</span>
-              <span className="text-muted">required</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <p className="text-red-400 text-xs font-mono">{error}</p>
-        </div>
+        <p className="text-red-600 text-sm mb-4 -mt-2">{error}</p>
       )}
 
       {/* Column Config */}
-      {file && (
-        <div className="bg-surface rounded-2xl border border-surface-border p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-white font-display font-500 text-sm">Column mapping</p>
-            <span className="badge badge-indigo">auto-detected</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted font-mono uppercase tracking-wider">
-                Date column
-              </label>
-              <input
-                type="text"
-                value={dateColumn}
-                onChange={(e) => handleDateColumnChange(e.target.value)}
-                className="input-field"
-                placeholder="date"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted font-mono uppercase tracking-wider">
-                Value column
-              </label>
-              <input
-                type="text"
-                value={valueColumn}
-                onChange={(e) => setValueColumn(e.target.value)}
-                className="input-field"
-                placeholder="value"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted font-mono uppercase tracking-wider">
-                Frequency
-              </label>
-              <div className="input-field flex items-center justify-between !cursor-default">
-                <span className="capitalize text-white">{frequency}</span>
-                <span className="text-[10px] uppercase tracking-wide text-muted">auto</span>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted font-mono uppercase tracking-wider">
-                Rows to predict
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={horizon}
-                onChange={(e) => setHorizon(parseInt(e.target.value, 10) || "")}
-                className="input-field"
-                placeholder="1095"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 p-3 rounded-xl bg-indigo-500/5 border border-indigo-500/10">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="2" className="mt-0.5 shrink-0">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-            </svg>
-            <p className="text-xs text-indigo-300/70">
-              Frequency is auto-detected from your date column.
-              Extra columns are ignored automatically.
-            </p>
-          </div>
+      <div className="grid sm:grid-cols-3 gap-4 mb-5">
+        <div className="text-center">
+          <label htmlFor="dateColumn" className="text-xs font-medium text-ink-muted block mb-1.5">
+            X
+          </label>
+          <input
+            id="dateColumn"
+            type="text"
+            value={dateColumn}
+            onChange={(e) => setDateColumn(e.target.value)}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-center
+                       focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+            placeholder="date"
+          />
         </div>
-      )}
+        <div className="text-center">
+          <label htmlFor="valueColumn" className="text-xs font-medium text-ink-muted block mb-1.5">
+            Y
+          </label>
+          <input
+            id="valueColumn"
+            type="text"
+            value={valueColumn}
+            onChange={(e) => setValueColumn(e.target.value)}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-center
+                       focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+            placeholder="value"
+          />
+        </div>
+        <div className="text-center">
+          <label htmlFor="horizon" className="text-xs font-medium text-ink-muted block mb-1.5">
+            Rows to Predict
+          </label>
+          <input
+            id="horizon"
+            type="number"
+            min={1}
+            value={horizon}
+            onChange={(e) => setHorizon(parseInt(e.target.value, 10) || "")}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm text-center
+                       focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
+            placeholder="1095"
+          />
+        </div>
+      </div>
 
       {/* CSV Preview */}
       {preview && (
-        <div className="bg-surface rounded-2xl border border-surface-border overflow-hidden">
-          <div className="px-5 py-3 border-b border-surface-border flex items-center justify-between">
-            <p className="text-xs text-muted font-mono uppercase tracking-wider">
-              Data preview
-            </p>
-            <span className="text-xs text-muted font-mono">
-              showing 5 of {preview.total.toLocaleString()} rows
-            </span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="preview-table">
+        <div className="mb-5">
+          <p className="text-xs font-medium text-ink-muted mb-2">Preview (first 5 rows)</p>
+          <div className="table-scroll overflow-x-auto border border-slate-200 rounded-lg">
+            <table className="text-xs w-full border-collapse">
               <thead>
-                <tr>
+                <tr className="bg-slate-50">
                   {preview.headers.map((h, i) => (
-                    <th key={i}>{h}</th>
+                    <th key={i} className="px-3 py-2 text-left font-medium text-ink-muted border-b border-slate-200">
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {preview.rows.map((row, i) => (
-                  <tr key={i}>
+                  <tr key={i} className="border-b border-slate-100 last:border-0">
                     {row.map((cell, j) => (
-                      <td key={j}>{cell}</td>
+                      <td key={j} className="px-3 py-2 text-ink-muted">{cell}</td>
                     ))}
                   </tr>
                 ))}
@@ -262,28 +215,33 @@ export default function FileUpload({ onForecast, loading }) {
         </div>
       )}
 
-      {/* Submit */}
-      <button
-        onClick={handleSubmit}
-        disabled={loading || !file}
-        className="btn-primary w-full py-3.5 px-6 text-sm flex items-center justify-center gap-2"
-      >
-        {loading ? (
-          <>
-            <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-            </svg>
-            Running TimesFM inference…
-          </>
-        ) : (
-          <>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-            Generate Forecast
-          </>
-        )}
-      </button>
+      {/* Submit / Cancel Buttons */}
+      {loading ? (
+        <div className="flex gap-3">
+          <button
+            disabled
+            className="flex-1 bg-primary/70 text-white py-3 rounded-lg font-medium text-sm cursor-not-allowed"
+          >
+            Forecasting… Please wait
+          </button>
+          <button
+            onClick={handleCancel}
+            className="px-4 py-3 rounded-lg font-medium text-sm border border-slate-300 text-slate-700 hover:bg-slate-100"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={handleSubmit}
+          disabled={!file}
+          className="w-full bg-primary text-white py-3 rounded-lg font-medium text-sm
+                     hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed
+                     transition-colors duration-150"
+        >
+          Generate
+        </button>
+      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - model_cache:/root/.cache/huggingface
+      - model_cache:/app/models
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
